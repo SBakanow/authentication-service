@@ -1,4 +1,4 @@
-package de.seba.auth_service.config;
+package de.seba.auth_service.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
