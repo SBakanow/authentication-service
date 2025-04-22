@@ -1,6 +1,11 @@
 package de.seba.auth_service.controller;
 
-import de.seba.auth_service.config.JwtTokenProvider;
+import de.seba.auth_service.dto.request.LoginUserRequest;
+import de.seba.auth_service.dto.request.RegisterUserRequest;
+import de.seba.auth_service.dto.response.AuthUserResponse;
+import de.seba.auth_service.dto.response.LoginUserResponse;
+import de.seba.auth_service.dto.response.RegisterUserResponse;
+import de.seba.auth_service.util.JwtTokenProvider;
 import de.seba.auth_service.model.User;
 import de.seba.auth_service.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,14 +40,16 @@ public class AuthController {
   }
 
   @PostMapping("/register")
-  public ResponseEntity<?> register(@RequestBody User user) {
-    authService.registerUser(user.getUsername(), user.getPassword());
-    return ResponseEntity.ok("Registration successful");
+  public ResponseEntity<?> register(@RequestBody RegisterUserRequest registerUserRequest) {
+    User registeredUser = authService.registerUser(registerUserRequest);
+    RegisterUserResponse registerUserResponse = new RegisterUserResponse(
+        registeredUser.getUsername(), "Registration successful");
+    return ResponseEntity.ok(registerUserResponse);
   }
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody User user, HttpServletResponse response) {
-    User authenticatedUser = authService.authenticate(user.getUsername(), user.getPassword());
+  public ResponseEntity<?> login(@RequestBody LoginUserRequest loginUserRequest, HttpServletResponse response) {
+    User authenticatedUser = authService.loginUser(loginUserRequest);
     String token = jwtTokenProvider.generateToken(authenticatedUser.getUsername());
     ResponseCookie cookie = ResponseCookie.from("token", token)
         .httpOnly(true)
@@ -52,8 +59,9 @@ public class AuthController {
         .build();
 
     response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    return ResponseEntity.ok(
-        Map.of("message", "Login successful", "username", authenticatedUser.getUsername()));
+    LoginUserResponse loginUserResponse = new LoginUserResponse(authenticatedUser.getUsername(),
+        "Login successful");
+    return ResponseEntity.ok(loginUserResponse);
   }
 
   @PostMapping("/validate")
@@ -64,7 +72,8 @@ public class AuthController {
     if (jwtTokenProvider.validateToken(cookieToken)) {
       String username = jwtTokenProvider.getUsernameFromToken(cookieToken);
       Date expiresAt = jwtTokenProvider.getExpirationFromToken(cookieToken);
-      return ResponseEntity.ok(Map.of("username", username, "expiresAt", expiresAt));
+      AuthUserResponse authUserResponse = new AuthUserResponse(username, expiresAt);
+      return ResponseEntity.ok(authUserResponse);
     }
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired token");
   }
