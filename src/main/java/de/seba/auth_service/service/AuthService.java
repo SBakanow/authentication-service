@@ -1,6 +1,12 @@
 package de.seba.auth_service.service;
 
+import de.seba.auth_service.dto.request.LoginUserRequest;
+import de.seba.auth_service.dto.request.RegisterUserRequest;
+import de.seba.auth_service.exception.InvalidCredentialsException;
+import de.seba.auth_service.exception.UserAlreadyExistsException;
+import de.seba.auth_service.exception.UserNotFoundException;
 import de.seba.auth_service.model.User;
+import jakarta.validation.Valid;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,23 +21,23 @@ public class AuthService {
     this.passwordEncoder = passwordEncoder;
   }
 
-  public void registerUser(String username, String password) {
-    if (userService.findByUsername(username).isPresent()) {
-      throw new RuntimeException("User already exists");
+  public User registerUser(@Valid RegisterUserRequest registerUserRequest) {
+    if (userService.existsByUsername(registerUserRequest.getUsername())) {
+      throw new UserAlreadyExistsException("User already exists");
     }
-    User user = new User();
-    user.setUsername(username);
-    user.setPassword(passwordEncoder.encode(password));
+
+    String encodedPassword = passwordEncoder.encode(registerUserRequest.getPassword());
+    User user = new User(registerUserRequest.getUsername(), encodedPassword);
     userService.saveUser(user);
+    return user;
   }
 
-  public User authenticate(String username, String password) {
-    User user = userService.findByUsername(username)
-        .orElseThrow(() -> new RuntimeException("User not found"));
-    if (passwordEncoder.matches(password, user.getPassword())) {
-      return user;
+  public User loginUser(@Valid LoginUserRequest loginUserRequest) {
+    User user = userService.findByUsername(loginUserRequest.getUsername())
+        .orElseThrow(() -> new UserNotFoundException("User not found"));
+    if (!passwordEncoder.matches(loginUserRequest.getPassword(), user.getPassword())) {
+      throw new InvalidCredentialsException("Invalid credentials");
     }
-    throw new RuntimeException("Invalid credentials");
+    return user;
   }
-
 }
