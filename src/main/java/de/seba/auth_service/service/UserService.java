@@ -18,7 +18,11 @@ public class UserService {
     return userRepository.findByUsername(username);
   }
 
-  public void saveUser(User user) {
-    userRepository.save(user);
+  public Boolean existsByUsername(String username) {
+    return userRepository.existsByUsername(username);
+  }
+
+  public User saveUser(User user) {
+    return userRepository.save(user);
   }
 }
